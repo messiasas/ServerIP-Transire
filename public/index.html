@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cloud6</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ================= TOPBAR ================= -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-name">Cloud6</span>
+      <span class="brand-desc"> — Servidor em nuvem para testes de conexão</span>
+    </div>
+
+    <div class="status">
+      <span class="status-item">
+        <span class="status-dot" id="lampServer"><span class="led" data-state="on"></span></span>
+        Servidor
+      </span>
+      <span class="status-item">ECHO [::]:5000</span>
+      <span class="status-item">API [::]:7777</span>
+      <span class="status-item mono" id="clock">--:--:--</span>
+    </div>
+  </header>
+
+  <div class="body">
+
+    <!-- ================= SIDEBAR ================= -->
+    <aside class="sidebar">
+      <div class="stats">
+        <div class="stat">
+          <span class="stat-value" id="totalCount">0</span>
+          <span class="stat-label">Conexões totais</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="activeCount">0</span>
+          <span class="stat-label">Ativas agora</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value" id="shownCount">0</span>
+          <span class="stat-label">Linhas exibidas</span>
+        </div>
+      </div>
+
+      <div class="filter">
+        <label for="ipFilter">Filtrar por IP</label>
+        <input
+          type="text"
+          id="ipFilter"
+          placeholder="ex: fd00:: ou 192.168."
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button id="clearFilter" type="button">Limpar filtro</button>
+        <span class="filter-hint" id="filterHint">exibindo tudo</span>
+      </div>
+
+      <div class="devices">
+        <div class="devices-header">
+          <span>Dispositivos</span>
+          <span class="devices-count" id="deviceCount">0</span>
+        </div>
+        <div class="device-list" id="deviceList">
+          <div class="device-empty">nenhum dispositivo registrado ainda</div>
+        </div>
+      </div>
+
+      <div class="sidebar-logo">
+        <img src="images/logo.png" alt="Logo" />
+      </div>
+    </aside>
+
+    <!-- ================= LOG PANEL ================= -->
+    <main class="log-panel">
+      <div class="log-header">Registro de tráfego</div>
+      <div class="table-wrap" id="tableWrap" tabindex="0">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th>Dia</th>
+              <th>Horário</th>
+              <th>Serial Number</th>
+              <th>Protocolo</th>
+              <th>Origem</th>
+              <th>Dados</th>
+            </tr>
+          </thead>
+          <tbody id="logTableBody"></tbody>
+        </table>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
