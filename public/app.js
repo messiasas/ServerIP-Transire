@@ -15,9 +15,9 @@
   let events = [];
   let ipFilterText = "";
   let serialFilterText = "";
-  const columnFilters = { dia: "", horario: "", serial: "", protocolo: "", origem: "", dados: "" };
+  const columnFilters = { dia: "", horario: "", serial: "", origem: "", comunicacao: "", teste: "" };
 
-  const DADOS_MAX_LEN = 60;
+  const COMUNICACAO_MAX_LEN = 60;
 
   // ---------------------------------------------------------------------
   // Relógio da rodapé
@@ -57,56 +57,59 @@
     return { serial: serial || "—", message };
   }
 
-  // Deriva os valores das 6 colunas a partir de cada tipo de evento
+  // Deriva os valores das colunas a partir de cada tipo de evento
   function rowFields(ev) {
     const dia = formatDate(ev.timestamp);
     const horario = formatTime(ev.timestamp);
-    const protocolo = ev.family || null;
     let serial = "—";
     let origem = "—";
-    let dados = "—";
+    let comunicacao = "—";
+    // Teste (resultado do OK) ainda não tem lógica implementada — fica
+    // vazia por enquanto. Comunicação por ora só recebe as mensagens dos
+    // dispositivos externos (mesmo comportamento da antiga coluna Dados).
+    const teste = "—";
 
     switch (ev.type) {
       case "connect":
         origem = `${ev.ip}:${ev.port}`;
-        dados = "nova conexão";
+        comunicacao = "nova conexão";
         break;
       case "disconnect":
         origem = `${ev.ip}:${ev.port}`;
-        dados = "conexão encerrada";
+        comunicacao = "conexão encerrada";
         break;
       case "error":
         origem = `${ev.ip}:${ev.port}`;
-        dados = truncate(ev.message, DADOS_MAX_LEN);
+        comunicacao = truncate(ev.message, COMUNICACAO_MAX_LEN);
         break;
       case "data":
         origem = `${ev.ip}:${ev.port}`;
         if (ev.text !== null) {
           const parsed = splitSerial(ev.text);
           serial = parsed.serial;
-          dados = truncate(parsed.message, DADOS_MAX_LEN);
+          comunicacao = truncate(parsed.message, COMUNICACAO_MAX_LEN);
         } else {
-          dados = `0x${ev.hex.slice(0, 40)}${ev.hex.length > 40 ? "…" : ""} (binário)`;
+          comunicacao = `0x${ev.hex.slice(0, 40)}${ev.hex.length > 40 ? "…" : ""} (binário)`;
         }
         break;
       case "device_register":
         origem = ev.ip;
         serial = ev.name;
-        dados = truncate(`dispositivo registrado — porta de retorno ${ev.replyPort}`, DADOS_MAX_LEN);
+        comunicacao = truncate(`dispositivo registrado — porta de retorno ${ev.replyPort}`, COMUNICACAO_MAX_LEN);
         break;
       case "api_ping":
         origem = ev.ip;
-        dados = "GET /api/ping";
+        comunicacao = "GET /api/ping";
         break;
       case "pingback_ok":
       case "pingback_fail":
         origem = `${ev.ip}:${ev.replyPort}`;
         serial = ev.name;
-        dados = truncate(ev.message, DADOS_MAX_LEN);
+        comunicacao = truncate(ev.message, COMUNICACAO_MAX_LEN);
         break;
     }
 
-    return { dia, horario, serial, protocolo, origem, dados };
+    return { dia, horario, serial, origem, comunicacao, teste };
   }
 
   function buildRow(ev) {
@@ -124,25 +127,19 @@
     tdSerial.className = "serial-cell";
     tdSerial.textContent = f.serial;
 
-    const tdProto = document.createElement("td");
-    if (f.protocolo) {
-      const badge = document.createElement("span");
-      badge.className = `family-badge family-${f.protocolo.toLowerCase()}`;
-      badge.textContent = f.protocolo;
-      tdProto.appendChild(badge);
-    } else {
-      tdProto.textContent = "—";
-    }
-
     const tdOrigem = document.createElement("td");
     tdOrigem.className = "origem-cell";
     tdOrigem.textContent = f.origem;
 
-    const tdDados = document.createElement("td");
-    tdDados.className = "dados-cell";
-    tdDados.textContent = f.dados;
+    const tdComunicacao = document.createElement("td");
+    tdComunicacao.className = "comunicacao-cell";
+    tdComunicacao.textContent = f.comunicacao;
 
-    tr.append(tdDia, tdHora, tdSerial, tdProto, tdOrigem, tdDados);
+    const tdTeste = document.createElement("td");
+    tdTeste.className = "teste-cell";
+    tdTeste.textContent = f.teste;
+
+    tr.append(tdDia, tdHora, tdSerial, tdOrigem, tdComunicacao, tdTeste);
     return tr;
   }
 
@@ -235,9 +232,9 @@
     dia: "dia",
     horario: "horário",
     serial: "serial (coluna)",
-    protocolo: "protocolo",
     origem: "origem",
-    dados: "dados",
+    comunicacao: "comunicação",
+    teste: "teste",
   };
 
   function updateFilterHint() {

@@ -201,32 +201,14 @@ html, body {
 .log-line.pingback_fail .log-tag { color: var(--danger); }
 .log-line.pingback_fail .log-body { color: var(--danger); }
 
-.family-badge {
-  flex-shrink: 0;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  padding: 1px 6px;
-  border-radius: 3px;
-  align-self: center;
-}
-.family-badge.family-ipv6 {
-  color: var(--success);
-  background: #55704a1a;
-  border: 1px solid #55704a40;
-}
-.family-badge.family-ipv4 {
-  color: var(--warning);
-  background: #92702f1a;
-  border: 1px solid #92702f40;
-}
-
 .sidebar-logo {
   margin-top: auto;
+  margin-bottom: -20px;
   padding-top: 20px;
   display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: 2px;
 }
 
 .sidebar-logo img {
@@ -235,6 +217,13 @@ html, body {
   width: 100%;
   height: auto;
   object-fit: contain;
+}
+
+.sidebar-support {
+  font-size: 11.5px;
+  line-height: 1.2;
+  color: var(--text-faint);
+  text-align: center;
 }
 
 /* ============= LOG PANEL ============= */
@@ -313,7 +302,7 @@ html, body {
   vertical-align: middle;
 }
 
-.log-table tbody td.dados-cell {
+.log-table tbody td.comunicacao-cell {
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -323,7 +312,7 @@ html, body {
 }
 
 .log-table tbody tr.row-error td { color: var(--danger); }
-.log-table tbody tr.row-pingback_fail td.dados-cell { color: var(--danger); }
+.log-table tbody tr.row-pingback_fail td.comunicacao-cell { color: var(--danger); }
 .log-table tbody tr.row-disconnect td { color: var(--text-faint); }
 .log-table tbody tr.row-connect td.origem-cell,
 .log-table tbody tr.row-device_register td.serial-cell { color: var(--success); }

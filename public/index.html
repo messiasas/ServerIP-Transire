@@ -25,8 +25,8 @@
         <span class="status-dot" id="lampServer"><span class="led" data-state="on"></span></span>
         Servidor
       </span>
-      <span class="status-item">ECHO [::]:5000</span>
-      <span class="status-item">API [::]:7777</span>
+      <span class="status-item">ECHO :1111</span>
+      <span class="status-item">API :7777</span>
       <span class="status-item mono" id="clock">--:--:--</span>
     </div>
   </header>
@@ -73,6 +73,7 @@
 
       <div class="sidebar-logo">
         <img src="images/logo.png" alt="Logo" />
+        <span class="sidebar-support">suporte@transireserv.com - Versão 1.0</span>
       </div>
     </aside>
 
@@ -85,17 +86,17 @@
               <th>Dia</th>
               <th>Horário</th>
               <th>Serial Number</th>
-              <th>Protocolo</th>
               <th>Origem</th>
-              <th>Dados</th>
+              <th>Comunicação</th>
+              <th>Teste</th>
             </tr>
             <tr class="filter-row">
               <th><input type="text" class="col-filter-input" data-col="dia" placeholder="filtrar" autocomplete="off" spellcheck="false" /></th>
               <th><input type="text" class="col-filter-input" data-col="horario" placeholder="filtrar" autocomplete="off" spellcheck="false" /></th>
               <th><input type="text" class="col-filter-input" data-col="serial" placeholder="filtrar" autocomplete="off" spellcheck="false" /></th>
-              <th><input type="text" class="col-filter-input" data-col="protocolo" placeholder="filtrar" autocomplete="off" spellcheck="false" /></th>
               <th><input type="text" class="col-filter-input" data-col="origem" placeholder="filtrar" autocomplete="off" spellcheck="false" /></th>
-              <th><input type="text" class="col-filter-input" data-col="dados" placeholder="filtrar" autocomplete="off" spellcheck="false" /></th>
+              <th><input type="text" class="col-filter-input" data-col="comunicacao" placeholder="filtrar" autocomplete="off" spellcheck="false" /></th>
+              <th><input type="text" class="col-filter-input" data-col="teste" placeholder="filtrar" autocomplete="off" spellcheck="false" /></th>
             </tr>
           </thead>
           <tbody id="logTableBody"></tbody>

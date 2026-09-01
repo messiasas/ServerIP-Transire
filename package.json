@@ -1,7 +1,7 @@
 {
-  "name": "ipv6-echo-monitor",
+  "name": "serverip-echo-monitor",
   "version": "1.0.0",
-  "description": "Servidor ECHO IPv6 (TCP) com painel de monitoramento web em tempo real",
+  "description": "Servidor ECHO TCP (IPv4) com painel de monitoramento web em tempo real",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
