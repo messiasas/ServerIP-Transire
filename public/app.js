@@ -5,17 +5,17 @@
   const activeCountEl = document.getElementById("activeCount");
   const shownCountEl = document.getElementById("shownCount");
   const ipFilterEl = document.getElementById("ipFilter");
+  const serialFilterEl = document.getElementById("serialFilter");
+  const colFilterEls = document.querySelectorAll(".col-filter-input");
   const clearFilterBtn = document.getElementById("clearFilter");
   const filterHintEl = document.getElementById("filterHint");
   const lampServer = document.getElementById("lampServer").querySelector(".led");
   const clockEl = document.getElementById("clock");
-  const deviceListEl = document.getElementById("deviceList");
-  const deviceCountEl = document.getElementById("deviceCount");
 
   let events = [];
-  let filterText = "";
-  let devices = [];
-  let activeSocket = null;
+  let ipFilterText = "";
+  let serialFilterText = "";
+  const columnFilters = { dia: "", horario: "", serial: "", protocolo: "", origem: "", dados: "" };
 
   const DADOS_MAX_LEN = 60;
 
@@ -151,19 +151,37 @@
     tr.className = "table-empty-row";
     const td = document.createElement("td");
     td.colSpan = 6;
-    td.textContent = filterText
-      ? `nenhum evento para o filtro "${filterText}"`
+    td.textContent = hasActiveFilters()
+      ? "nenhum evento para os filtros aplicados"
       : "aguardando conexões...";
     tr.appendChild(td);
     return tr;
   }
 
   // ---------------------------------------------------------------------
-  // Renderização (aplica filtro por IP)
+  // Renderização (aplica os filtros: Serial Number e IP na barra lateral,
+  // e um filtro por texto em cada coluna da tabela)
   // ---------------------------------------------------------------------
+  function hasActiveFilters() {
+    return Boolean(
+      ipFilterText ||
+      serialFilterText ||
+      Object.values(columnFilters).some((v) => v)
+    );
+  }
+
   function matchesFilter(ev) {
-    if (!filterText) return true;
-    return (ev.ip || "").toLowerCase().includes(filterText);
+    if (ipFilterText && !(ev.ip || "").toLowerCase().includes(ipFilterText)) return false;
+
+    const f = rowFields(ev);
+    if (serialFilterText && !String(f.serial || "").toLowerCase().includes(serialFilterText)) return false;
+
+    for (const col of Object.keys(columnFilters)) {
+      const needle = columnFilters[col];
+      if (needle && !String(f[col] || "").toLowerCase().includes(needle)) return false;
+    }
+
+    return true;
   }
 
   function isNearBottom() {
@@ -211,75 +229,58 @@
   }
 
   // ---------------------------------------------------------------------
-  // Dispositivos (app Android via API :7777)
+  // Filtros: Serial Number e IP (barra lateral) + filtro por coluna (tabela)
   // ---------------------------------------------------------------------
-  function escapeHtml(str) {
-    return String(str).replace(/[&<>"']/g, (c) => (
-      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
-    ));
-  }
+  const COLUMN_LABELS = {
+    dia: "dia",
+    horario: "horário",
+    serial: "serial (coluna)",
+    protocolo: "protocolo",
+    origem: "origem",
+    dados: "dados",
+  };
 
-  function renderDevices() {
-    deviceCountEl.textContent = devices.length;
-
-    if (devices.length === 0) {
-      deviceListEl.innerHTML = '<div class="device-empty">nenhum dispositivo registrado ainda</div>';
-      return;
+  function updateFilterHint() {
+    const parts = [];
+    if (serialFilterText) parts.push(`serial: "${serialFilterText}"`);
+    if (ipFilterText) parts.push(`ip: "${ipFilterText}"`);
+    for (const col of Object.keys(columnFilters)) {
+      if (columnFilters[col]) parts.push(`${COLUMN_LABELS[col]}: "${columnFilters[col]}"`);
     }
-
-    deviceListEl.innerHTML = "";
-    devices.forEach((d) => {
-      const state = d.lastPingBackStatus === "ok" ? "on"
-        : d.lastPingBackStatus === "falha" ? "fail"
-        : "pendente";
-      const lastPing = d.lastPingBackAt
-        ? `ping-pong: ${formatTime(d.lastPingBackAt)} — ${d.lastPingBackStatus}`
-        : "ping-pong: ainda não testado";
-
-      const card = document.createElement("div");
-      card.className = "device-card";
-      const familyBadge = d.family
-        ? `<span class="family-badge family-${d.family.toLowerCase()}">${d.family}</span>`
-        : "";
-      card.innerHTML = `
-        <div class="device-id">
-          <span class="led" data-state="${state}"></span>
-          <span class="device-name">${escapeHtml(d.name)}</span>
-          ${familyBadge}
-        </div>
-        <span class="device-meta">[${escapeHtml(d.ip)}]:${escapeHtml(d.replyPort)}</span>
-        <span class="device-meta">${lastPing}</span>
-        <button class="device-ping-btn" type="button" data-name="${escapeHtml(d.name)}">Testar ping</button>
-      `;
-      deviceListEl.appendChild(card);
-    });
-
-    deviceListEl.querySelectorAll(".device-ping-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        if (activeSocket && activeSocket.readyState === WebSocket.OPEN) {
-          btn.disabled = true;
-          activeSocket.send(JSON.stringify({ type: "ping_device", name: btn.dataset.name }));
-          setTimeout(() => { btn.disabled = false; }, 2000);
-        }
-      });
-    });
+    filterHintEl.textContent = parts.length ? `filtro: ${parts.join(", ")}` : "exibindo tudo";
+    filterHintEl.classList.toggle("active", parts.length > 0);
   }
 
-  // ---------------------------------------------------------------------
-  // Filtro por IP
-  // ---------------------------------------------------------------------
-  ipFilterEl.addEventListener("input", () => {
-    filterText = ipFilterEl.value.trim().toLowerCase();
-    filterHintEl.textContent = filterText ? `filtro: "${filterText}"` : "exibindo tudo";
-    filterHintEl.classList.toggle("active", Boolean(filterText));
+  serialFilterEl.addEventListener("input", () => {
+    serialFilterText = serialFilterEl.value.trim().toLowerCase();
+    updateFilterHint();
     render();
   });
 
+  ipFilterEl.addEventListener("input", () => {
+    ipFilterText = ipFilterEl.value.trim().toLowerCase();
+    updateFilterHint();
+    render();
+  });
+
+  colFilterEls.forEach((input) => {
+    input.addEventListener("input", () => {
+      columnFilters[input.dataset.col] = input.value.trim().toLowerCase();
+      updateFilterHint();
+      render();
+    });
+  });
+
   clearFilterBtn.addEventListener("click", () => {
+    serialFilterEl.value = "";
     ipFilterEl.value = "";
-    filterText = "";
-    filterHintEl.textContent = "exibindo tudo";
-    filterHintEl.classList.remove("active");
+    serialFilterText = "";
+    ipFilterText = "";
+    colFilterEls.forEach((input) => {
+      input.value = "";
+      columnFilters[input.dataset.col] = "";
+    });
+    updateFilterHint();
     render();
   });
 
@@ -289,7 +290,6 @@
   function connectSocket() {
     const proto = location.protocol === "https:" ? "wss" : "ws";
     const ws = new WebSocket(`${proto}://${location.host}`);
-    activeSocket = ws;
 
     ws.addEventListener("open", () => {
       lampServer.dataset.state = "on";
@@ -315,13 +315,13 @@
         return;
       }
 
+      // O painel de Dispositivos foi removido do front-end, mas o servidor
+      // ainda envia esse snapshot ao registrar/pingar um dispositivo — só
+      // ignoramos aqui pra não virar uma linha inválida na tabela.
       if (data.type === "devices_snapshot") {
-        devices = data.devices || [];
-        renderDevices();
         return;
       }
 
-<<<<<<< HEAD
       // Atualização "silenciosa" de contadores (ex: quando uma conexão de
       // echo fecha) — não vira linha na tabela, só atualiza o total/ativas.
       if (data.type === "counts") {
@@ -330,8 +330,6 @@
         return;
       }
 
-=======
->>>>>>> 1f902fe684080e3f9fb5dc10711842875bff06f4
       if (typeof data.totalConnections === "number") {
         totalCountEl.textContent = data.totalConnections;
       }

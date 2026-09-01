@@ -51,7 +51,6 @@ function broadcastDevices() {
   broadcast({ type: "devices_snapshot", devices: devicesSnapshot() });
 }
 
-<<<<<<< HEAD
 // Atualiza os contadores (total/ativas) de quem já está com o painel aberto,
 // sem criar uma linha na tabela e sem entrar no histórico — usado quando uma
 // conexão de echo fecha, pra não gerar a linha de "conexão encerrada".
@@ -59,8 +58,6 @@ function broadcastCounts() {
   broadcast({ type: "counts", totalConnections, activeConnections });
 }
 
-=======
->>>>>>> 1f902fe684080e3f9fb5dc10711842875bff06f4
 // Tenta contatar o mini-servidor HTTP do próprio celular (NanoHTTPD, GET /api/ping)
 // — é a "volta" do ping-pong: o servidor central confirma que consegue alcançar o app.
 function pingDeviceBack(device) {
@@ -135,22 +132,9 @@ function handleEchoConnection(socket) {
 
   totalConnections += 1;
   activeConnections += 1;
-<<<<<<< HEAD
   // Não emite mais um evento "connect" separado — o contador é atualizado
   // aqui em memória, e só vira uma linha visível no painel quando (e se)
   // o evento "data" chegar, já carregando os valores atuais dos contadores.
-=======
-
-  pushEvent({
-    type: "connect",
-    ip: remoteIp,
-    port: remotePort,
-    family,
-    timestamp: nowISO(),
-    totalConnections,
-    activeConnections,
-  });
->>>>>>> 1f902fe684080e3f9fb5dc10711842875bff06f4
 
   socket.on("data", (data) => {
     const formatted = formatData(data);
@@ -161,11 +145,8 @@ function handleEchoConnection(socket) {
       port: remotePort,
       family,
       timestamp: nowISO(),
-<<<<<<< HEAD
       totalConnections,
       activeConnections,
-=======
->>>>>>> 1f902fe684080e3f9fb5dc10711842875bff06f4
       ...formatted,
     });
 
@@ -176,21 +157,9 @@ function handleEchoConnection(socket) {
 
   socket.on("close", () => {
     activeConnections = Math.max(0, activeConnections - 1);
-<<<<<<< HEAD
     // Sem pushEvent aqui — não queremos uma linha de "conexão encerrada" no
     // painel. Só atualizamos os contadores de quem já está com o painel aberto.
     broadcastCounts();
-=======
-    pushEvent({
-      type: "disconnect",
-      ip: remoteIp,
-      port: remotePort,
-      family,
-      timestamp: nowISO(),
-      totalConnections,
-      activeConnections,
-    });
->>>>>>> 1f902fe684080e3f9fb5dc10711842875bff06f4
   });
 
   socket.on("error", (err) => {

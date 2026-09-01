@@ -1,4 +1,4 @@
-# ECHO-6 (Cloud6) — Monitor de Echo TCP/IPv6 + API de dispositivos
+# ECHO-6 (ServerIP) — Monitor de Echo TCP/IPv6 + API de dispositivos
 
 Equivalente ao `server.py` original, com um painel web em tempo real para
 acompanhar as conexões, os dados recebidos/devolvidos, e um filtro por IP.

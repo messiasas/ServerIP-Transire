@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Cloud6</title>
+<title>ServerIP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -16,8 +16,8 @@
   <!-- ================= TOPBAR ================= -->
   <header class="topbar">
     <div class="brand">
-      <span class="brand-name">Cloud6</span>
-      <span class="brand-desc"> — Servidor em nuvem para testes de conexão</span>
+      <span class="brand-name">ServerIP</span>
+      <span class="brand-desc"> — Servidor para testes de conexão</span>
     </div>
 
     <div class="status">
@@ -51,6 +51,14 @@
       </div>
 
       <div class="filter">
+        <label for="serialFilter">Filtrar por Serial Number</label>
+        <input
+          type="text"
+          id="serialFilter"
+          placeholder="ex: SN-0042"
+          autocomplete="off"
+          spellcheck="false"
+        />
         <label for="ipFilter">Filtrar por IP</label>
         <input
           type="text"
@@ -59,18 +67,8 @@
           autocomplete="off"
           spellcheck="false"
         />
-        <button id="clearFilter" type="button">Limpar filtro</button>
+        <button id="clearFilter" type="button">Limpar filtros</button>
         <span class="filter-hint" id="filterHint">exibindo tudo</span>
-      </div>
-
-      <div class="devices">
-        <div class="devices-header">
-          <span>Dispositivos</span>
-          <span class="devices-count" id="deviceCount">0</span>
-        </div>
-        <div class="device-list" id="deviceList">
-          <div class="device-empty">nenhum dispositivo registrado ainda</div>
-        </div>
       </div>
 
       <div class="sidebar-logo">
@@ -80,17 +78,24 @@
 
     <!-- ================= LOG PANEL ================= -->
     <main class="log-panel">
-      <div class="log-header">Registro de tráfego</div>
       <div class="table-wrap" id="tableWrap" tabindex="0">
         <table class="log-table">
           <thead>
-            <tr>
+            <tr class="header-row">
               <th>Dia</th>
               <th>Horário</th>
               <th>Serial Number</th>
               <th>Protocolo</th>
               <th>Origem</th>
               <th>Dados</th>
+            </tr>
+            <tr class="filter-row">
+              <th><input type="text" class="col-filter-input" data-col="dia" placeholder="filtrar" autocomplete="off" spellcheck="false" /></th>
+              <th><input type="text" class="col-filter-input" data-col="horario" placeholder="filtrar" autocomplete="off" spellcheck="false" /></th>
+              <th><input type="text" class="col-filter-input" data-col="serial" placeholder="filtrar" autocomplete="off" spellcheck="false" /></th>
+              <th><input type="text" class="col-filter-input" data-col="protocolo" placeholder="filtrar" autocomplete="off" spellcheck="false" /></th>
+              <th><input type="text" class="col-filter-input" data-col="origem" placeholder="filtrar" autocomplete="off" spellcheck="false" /></th>
+              <th><input type="text" class="col-filter-input" data-col="dados" placeholder="filtrar" autocomplete="off" spellcheck="false" /></th>
             </tr>
           </thead>
           <tbody id="logTableBody"></tbody>
