@@ -321,6 +321,7 @@
         return;
       }
 
+<<<<<<< HEAD
       // Atualização "silenciosa" de contadores (ex: quando uma conexão de
       // echo fecha) — não vira linha na tabela, só atualiza o total/ativas.
       if (data.type === "counts") {
@@ -329,6 +330,8 @@
         return;
       }
 
+=======
+>>>>>>> 1f902fe684080e3f9fb5dc10711842875bff06f4
       if (typeof data.totalConnections === "number") {
         totalCountEl.textContent = data.totalConnections;
       }
