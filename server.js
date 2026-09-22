@@ -1,8 +1,10 @@
 const net = require("net");
 const http = require("http");
+const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const { WebSocketServer } = require("ws");
+const { rowFields } = require("./public/rowFields.js");
 
 // ---------------------------------------------------------------------------
 // Configuração
@@ -15,6 +17,12 @@ const API_HOST = process.env.API_HOST || "0.0.0.0";     // todas as interfaces I
 const HISTORY_LIMIT = 500; // quantos eventos ficam guardados em memória p/ novos clientes
 const PINGBACK_TIMEOUT_MS = 5000;
 
+// Diretório onde cada dia de registros fica gravado em um .txt próprio
+// (ex: 01-09-26.txt), com as mesmas colunas exibidas no painel.
+const HISTORY_DIR = path.join(__dirname, "historico");
+const HISTORY_DATE_RE = /^\d{2}-\d{2}-\d{2}$/;
+fs.mkdirSync(HISTORY_DIR, { recursive: true });
+
 // ---------------------------------------------------------------------------
 // Estado compartilhado
 // ---------------------------------------------------------------------------
@@ -23,9 +31,37 @@ let activeConnections = 0;
 const history = [];
 const devices = new Map(); // name -> { name, ip, replyPort, registeredAt, lastSeen, lastPingBackAt, lastPingBackStatus, lastPingBackMessage }
 
+// Nome do arquivo (dd-mm-aa) do dia do evento, no fuso horário local do servidor
+function historyFileDate(timestamp) {
+  const d = new Date(timestamp);
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${dd}-${mm}-${yy}`;
+}
+
+// Converte "dd-mm-aa" de volta pra Date, só pra poder ordenar os arquivos
+// cronologicamente (ordem alfabética não funciona, o dia vem primeiro)
+function parseHistoryDate(fileDate) {
+  const [dd, mm, yy] = fileDate.split("-").map(Number);
+  return new Date(2000 + yy, mm - 1, dd);
+}
+
+// Grava o evento no .txt do dia correspondente, com as mesmas 6 colunas do
+// painel (uma linha por evento, campos separados por tab)
+function appendHistoryLine(event) {
+  const row = rowFields(event);
+  const line = [row.dia, row.horario, row.serial, row.origem, row.comunicacao, row.teste].join("\t");
+  const filePath = path.join(HISTORY_DIR, `${historyFileDate(event.timestamp)}.txt`);
+  fs.appendFile(filePath, line + "\n", (err) => {
+    if (err) console.error("[HISTORICO] Erro ao gravar:", err.message);
+  });
+}
+
 function pushEvent(event) {
   history.push(event);
   if (history.length > HISTORY_LIMIT) history.shift();
+  appendHistoryLine(event);
   broadcast(event);
 }
 
@@ -92,6 +128,7 @@ async function pingBackAndReport(device) {
   pushEvent({
     type: result.ok ? "pingback_ok" : "pingback_fail",
     ip: device.ip,
+    ipFamily: device.ipFamily,
     name: device.name,
     replyPort: device.replyPort,
     timestamp: nowISO(),
@@ -117,6 +154,7 @@ function formatData(buffer) {
 function handleEchoConnection(socket) {
   const remoteIp = socket.remoteAddress || "desconhecido";
   const remotePort = socket.remotePort;
+  const remoteFamily = socket.remoteFamily; // "IPv4" ou "IPv6"
 
   totalConnections += 1;
   activeConnections += 1;
@@ -131,6 +169,7 @@ function handleEchoConnection(socket) {
       type: "data",
       ip: remoteIp,
       port: remotePort,
+      ipFamily: remoteFamily,
       timestamp: nowISO(),
       totalConnections,
       activeConnections,
@@ -154,6 +193,7 @@ function handleEchoConnection(socket) {
       type: "error",
       ip: remoteIp,
       port: remotePort,
+      ipFamily: remoteFamily,
       timestamp: nowISO(),
       message: err.message,
     });
@@ -173,6 +213,50 @@ echoServer.listen({ port: ECHO_PORT, host: ECHO_HOST }, () => {
 // ---------------------------------------------------------------------------
 const app = express();
 app.use(express.static(path.join(__dirname, "public")));
+
+// Datas com histórico gravado (mais recente primeiro)
+app.get("/api/history/dates", (req, res) => {
+  let files = [];
+  try {
+    files = fs.readdirSync(HISTORY_DIR);
+  } catch {
+    files = [];
+  }
+
+  const dates = files
+    .filter((f) => f.endsWith(".txt"))
+    .map((f) => f.slice(0, -4))
+    .filter((d) => HISTORY_DATE_RE.test(d))
+    .sort((a, b) => parseHistoryDate(b) - parseHistoryDate(a));
+
+  res.json(dates);
+});
+
+// Linhas gravadas em um dia específico (dd-mm-aa), já no formato das colunas do painel
+app.get("/api/history/:date", (req, res) => {
+  const { date } = req.params;
+  if (!HISTORY_DATE_RE.test(date)) {
+    return res.status(400).json({ message: "data inválida — use o formato dd-mm-aa" });
+  }
+
+  const filePath = path.join(HISTORY_DIR, `${date}.txt`);
+  fs.readFile(filePath, "utf8", (err, content) => {
+    if (err) {
+      if (err.code === "ENOENT") return res.json([]);
+      return res.status(500).json({ message: "erro ao ler histórico" });
+    }
+
+    const rows = content
+      .split("\n")
+      .filter((line) => line.trim().length > 0)
+      .map((line) => {
+        const [dia, horario, serial, origem, comunicacao, teste] = line.split("\t");
+        return { dia, horario, serial, origem, comunicacao, teste };
+      });
+
+    res.json(rows);
+  });
+});
 
 const webServer = http.createServer(app);
 const wss = new WebSocketServer({ server: webServer });
@@ -222,11 +306,13 @@ apiApp.post("/api/devices/ping", (req, res) => {
   }
 
   const ip = req.socket.remoteAddress || "";
+  const ipFamily = req.socket.remoteFamily;
   const now = nowISO();
   const existing = devices.get(name);
   const device = {
     name,
     ip,
+    ipFamily,
     replyPort,
     registeredAt: existing ? existing.registeredAt : now,
     lastSeen: now,
@@ -236,7 +322,7 @@ apiApp.post("/api/devices/ping", (req, res) => {
   };
   devices.set(name, device);
 
-  pushEvent({ type: "device_register", ip, name, replyPort, timestamp: now });
+  pushEvent({ type: "device_register", ip, ipFamily, name, replyPort, timestamp: now });
   broadcastDevices();
 
   res.json({
@@ -253,7 +339,8 @@ apiApp.post("/api/devices/ping", (req, res) => {
 // Endpoint de ping "simples" — usado pelo botão manual do app
 apiApp.get("/api/ping", (req, res) => {
   const ip = req.socket.remoteAddress || "";
-  pushEvent({ type: "api_ping", ip, timestamp: nowISO() });
+  const ipFamily = req.socket.remoteFamily;
+  pushEvent({ type: "api_ping", ip, ipFamily, timestamp: nowISO() });
 
   res.json({
     message: "pong",

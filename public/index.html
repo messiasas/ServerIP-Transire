@@ -35,40 +35,74 @@
 
     <!-- ================= SIDEBAR ================= -->
     <aside class="sidebar">
-      <div class="stats">
-        <div class="stat">
-          <span class="stat-value" id="totalCount">0</span>
-          <span class="stat-label">Conexões totais</span>
+      <div class="nav-tabs">
+        <button type="button" class="nav-tab active" id="navPainel" data-view="painel">Painel</button>
+        <button type="button" class="nav-tab" id="navHistorico" data-view="historico">Histórico</button>
+      </div>
+
+      <!-- ---- aba Painel: conexões + filtros em tempo real ---- -->
+      <div class="sidebar-view" id="viewPainel">
+        <div class="stats">
+          <div class="stat">
+            <span class="stat-value" id="totalCount">0</span>
+            <span class="stat-label">Conexões totais</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="activeCount">0</span>
+            <span class="stat-label">Ativas agora</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="shownCount">0</span>
+            <span class="stat-label">Linhas exibidas</span>
+          </div>
         </div>
-        <div class="stat">
-          <span class="stat-value" id="activeCount">0</span>
-          <span class="stat-label">Ativas agora</span>
-        </div>
-        <div class="stat">
-          <span class="stat-value" id="shownCount">0</span>
-          <span class="stat-label">Linhas exibidas</span>
+
+        <div class="filter">
+          <label for="serialFilter">Filtrar por Serial Number</label>
+          <input
+            type="text"
+            id="serialFilter"
+            placeholder="ex: SN-0042"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <label for="ipFilter">Filtrar por IP</label>
+          <input
+            type="text"
+            id="ipFilter"
+            placeholder="ex: fd00:: ou 192.168."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button id="clearFilter" type="button">Limpar filtros</button>
+          <span class="filter-hint" id="filterHint">exibindo tudo</span>
         </div>
       </div>
 
-      <div class="filter">
-        <label for="serialFilter">Filtrar por Serial Number</label>
-        <input
-          type="text"
-          id="serialFilter"
-          placeholder="ex: SN-0042"
-          autocomplete="off"
-          spellcheck="false"
-        />
-        <label for="ipFilter">Filtrar por IP</label>
-        <input
-          type="text"
-          id="ipFilter"
-          placeholder="ex: fd00:: ou 192.168."
-          autocomplete="off"
-          spellcheck="false"
-        />
-        <button id="clearFilter" type="button">Limpar filtros</button>
-        <span class="filter-hint" id="filterHint">exibindo tudo</span>
+      <!-- ---- aba Histórico: registros gravados em disco, por data ---- -->
+      <div class="sidebar-view" id="viewHistorico" hidden>
+        <div class="stats">
+          <div class="stat">
+            <span class="stat-value" id="historyCount">0</span>
+            <span class="stat-label">Registros na data</span>
+          </div>
+        </div>
+
+        <div class="filter">
+          <label for="historyDateSelect">Data</label>
+          <select id="historyDateSelect">
+            <option value="">nenhuma data gravada</option>
+          </select>
+          <label for="historyIpFilter">Filtrar por IP</label>
+          <input
+            type="text"
+            id="historyIpFilter"
+            placeholder="ex: fd00:: ou 192.168."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button id="historyBack" type="button">← Voltar ao Painel</button>
+        </div>
       </div>
 
       <div class="sidebar-logo">
@@ -102,11 +136,28 @@
           <tbody id="logTableBody"></tbody>
         </table>
       </div>
+
+      <div class="table-wrap" id="historyTableWrap" tabindex="0" hidden>
+        <table class="log-table">
+          <thead>
+            <tr class="header-row">
+              <th>Dia</th>
+              <th>Horário</th>
+              <th>Serial Number</th>
+              <th>Origem</th>
+              <th>Comunicação</th>
+              <th>Teste</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody"></tbody>
+        </table>
+      </div>
     </main>
 
   </div>
 </div>
 
+<script src="rowFields.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

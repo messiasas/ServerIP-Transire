@@ -12,12 +12,20 @@
   const lampServer = document.getElementById("lampServer").querySelector(".led");
   const clockEl = document.getElementById("clock");
 
+  const navTabEls = document.querySelectorAll(".nav-tab");
+  const viewPainelEl = document.getElementById("viewPainel");
+  const viewHistoricoEl = document.getElementById("viewHistorico");
+  const historyTableWrapEl = document.getElementById("historyTableWrap");
+  const historyTableBodyEl = document.getElementById("historyTableBody");
+  const historyDateSelectEl = document.getElementById("historyDateSelect");
+  const historyIpFilterEl = document.getElementById("historyIpFilter");
+  const historyCountEl = document.getElementById("historyCount");
+  const historyBackBtn = document.getElementById("historyBack");
+
   let events = [];
   let ipFilterText = "";
   let serialFilterText = "";
   const columnFilters = { dia: "", horario: "", serial: "", origem: "", comunicacao: "", teste: "" };
-
-  const COMUNICACAO_MAX_LEN = 60;
 
   // ---------------------------------------------------------------------
   // Relógio da rodapé
@@ -29,88 +37,10 @@
   setInterval(tickClock, 1000);
 
   // ---------------------------------------------------------------------
-  // Formatação de cada linha da tabela
+  // Formatação de cada linha da tabela (lógica compartilhada com o
+  // servidor, que usa a mesma função para gravar o histórico em disco)
   // ---------------------------------------------------------------------
-  function formatDate(iso) {
-    const d = new Date(iso);
-    const dd = String(d.getDate()).padStart(2, "0");
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    return `${dd}/${mm}/${d.getFullYear()}`;
-  }
-
-  function formatTime(iso) {
-    return new Date(iso).toLocaleTimeString("pt-BR", { hour12: false });
-  }
-
-  function truncate(str, max) {
-    if (!str) return "—";
-    return str.length > max ? str.slice(0, max) + "…" : str;
-  }
-
-  // Convenção do protocolo de echo: dispositivo manda "SERIAL:mensagem".
-  // Tudo antes dos dois-pontos é o número de série; o resto é a mensagem.
-  function splitSerial(text) {
-    const idx = text.indexOf(":");
-    if (idx === -1) return { serial: "—", message: text };
-    const serial = text.slice(0, idx).trim();
-    const message = text.slice(idx + 1).trim();
-    return { serial: serial || "—", message };
-  }
-
-  // Deriva os valores das colunas a partir de cada tipo de evento
-  function rowFields(ev) {
-    const dia = formatDate(ev.timestamp);
-    const horario = formatTime(ev.timestamp);
-    let serial = "—";
-    let origem = "—";
-    let comunicacao = "—";
-    // Teste (resultado do OK) ainda não tem lógica implementada — fica
-    // vazia por enquanto. Comunicação por ora só recebe as mensagens dos
-    // dispositivos externos (mesmo comportamento da antiga coluna Dados).
-    const teste = "—";
-
-    switch (ev.type) {
-      case "connect":
-        origem = `${ev.ip}:${ev.port}`;
-        comunicacao = "nova conexão";
-        break;
-      case "disconnect":
-        origem = `${ev.ip}:${ev.port}`;
-        comunicacao = "conexão encerrada";
-        break;
-      case "error":
-        origem = `${ev.ip}:${ev.port}`;
-        comunicacao = truncate(ev.message, COMUNICACAO_MAX_LEN);
-        break;
-      case "data":
-        origem = `${ev.ip}:${ev.port}`;
-        if (ev.text !== null) {
-          const parsed = splitSerial(ev.text);
-          serial = parsed.serial;
-          comunicacao = truncate(parsed.message, COMUNICACAO_MAX_LEN);
-        } else {
-          comunicacao = `0x${ev.hex.slice(0, 40)}${ev.hex.length > 40 ? "…" : ""} (binário)`;
-        }
-        break;
-      case "device_register":
-        origem = ev.ip;
-        serial = ev.name;
-        comunicacao = truncate(`dispositivo registrado — porta de retorno ${ev.replyPort}`, COMUNICACAO_MAX_LEN);
-        break;
-      case "api_ping":
-        origem = ev.ip;
-        comunicacao = "GET /api/ping";
-        break;
-      case "pingback_ok":
-      case "pingback_fail":
-        origem = `${ev.ip}:${ev.replyPort}`;
-        serial = ev.name;
-        comunicacao = truncate(ev.message, COMUNICACAO_MAX_LEN);
-        break;
-    }
-
-    return { dia, horario, serial, origem, comunicacao, teste };
-  }
+  const { rowFields } = window.RowFields;
 
   function buildRow(ev) {
     const f = rowFields(ev);
@@ -280,6 +210,157 @@
     updateFilterHint();
     render();
   });
+
+  // ---------------------------------------------------------------------
+  // Aba Histórico: lê os registros gravados em disco (public/rowFields.js
+  // já roda no servidor pra gerar essas mesmas linhas), organizados por data
+  // ---------------------------------------------------------------------
+  let historyRows = [];
+  let historyIpFilterText = "";
+
+  function buildHistoryRow(row) {
+    const tr = document.createElement("tr");
+
+    const tdDia = document.createElement("td");
+    tdDia.textContent = row.dia || "—";
+
+    const tdHora = document.createElement("td");
+    tdHora.textContent = row.horario || "—";
+
+    const tdSerial = document.createElement("td");
+    tdSerial.className = "serial-cell";
+    tdSerial.textContent = row.serial || "—";
+
+    const tdOrigem = document.createElement("td");
+    tdOrigem.className = "origem-cell";
+    tdOrigem.textContent = row.origem || "—";
+
+    const tdComunicacao = document.createElement("td");
+    tdComunicacao.className = "comunicacao-cell";
+    tdComunicacao.textContent = row.comunicacao || "—";
+
+    const tdTeste = document.createElement("td");
+    tdTeste.className = "teste-cell";
+    tdTeste.textContent = row.teste || "—";
+
+    tr.append(tdDia, tdHora, tdSerial, tdOrigem, tdComunicacao, tdTeste);
+    return tr;
+  }
+
+  function buildHistoryEmptyRow(message) {
+    const tr = document.createElement("tr");
+    tr.className = "table-empty-row";
+    const td = document.createElement("td");
+    td.colSpan = 6;
+    td.textContent = message;
+    tr.appendChild(td);
+    return tr;
+  }
+
+  function renderHistory() {
+    historyTableBodyEl.innerHTML = "";
+
+    const filtered = historyIpFilterText
+      ? historyRows.filter((row) => String(row.origem || "").toLowerCase().includes(historyIpFilterText))
+      : historyRows;
+
+    if (filtered.length === 0) {
+      historyTableBodyEl.appendChild(
+        buildHistoryEmptyRow(
+          historyRows.length === 0 ? "nenhum registro para esta data" : "nenhum registro para o filtro de IP aplicado"
+        )
+      );
+    } else {
+      const frag = document.createDocumentFragment();
+      filtered.forEach((row) => frag.appendChild(buildHistoryRow(row)));
+      historyTableBodyEl.appendChild(frag);
+    }
+
+    historyCountEl.textContent = filtered.length;
+  }
+
+  async function loadHistoryDates() {
+    const previouslySelected = historyDateSelectEl.value;
+    try {
+      const res = await fetch("/api/history/dates");
+      const dates = await res.json();
+
+      historyDateSelectEl.innerHTML = "";
+      if (!dates || dates.length === 0) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "nenhuma data gravada";
+        historyDateSelectEl.appendChild(opt);
+        historyRows = [];
+        renderHistory();
+        return;
+      }
+
+      dates.forEach((date) => {
+        const opt = document.createElement("option");
+        opt.value = date;
+        opt.textContent = date;
+        historyDateSelectEl.appendChild(opt);
+      });
+
+      if (dates.includes(previouslySelected)) {
+        historyDateSelectEl.value = previouslySelected;
+      }
+
+      await loadHistoryForDate(historyDateSelectEl.value);
+    } catch {
+      historyDateSelectEl.innerHTML = '<option value="">erro ao carregar datas</option>';
+      historyRows = [];
+      renderHistory();
+    }
+  }
+
+  async function loadHistoryForDate(date) {
+    if (!date) {
+      historyRows = [];
+      renderHistory();
+      return;
+    }
+    try {
+      const res = await fetch(`/api/history/${encodeURIComponent(date)}`);
+      historyRows = res.ok ? await res.json() : [];
+    } catch {
+      historyRows = [];
+    }
+    renderHistory();
+  }
+
+  historyDateSelectEl.addEventListener("change", () => {
+    loadHistoryForDate(historyDateSelectEl.value);
+  });
+
+  historyIpFilterEl.addEventListener("input", () => {
+    historyIpFilterText = historyIpFilterEl.value.trim().toLowerCase();
+    renderHistory();
+  });
+
+  // ---------------------------------------------------------------------
+  // Alternância Painel <-> Histórico
+  // ---------------------------------------------------------------------
+  function switchView(view) {
+    const isHistorico = view === "historico";
+
+    navTabEls.forEach((btn) => btn.classList.toggle("active", btn.dataset.view === view));
+    viewPainelEl.hidden = isHistorico;
+    viewHistoricoEl.hidden = !isHistorico;
+    tableWrapEl.hidden = isHistorico;
+    historyTableWrapEl.hidden = !isHistorico;
+
+    if (isHistorico) {
+      loadHistoryDates();
+    }
+  }
+
+  navTabEls.forEach((btn) => {
+    btn.addEventListener("click", () => switchView(btn.dataset.view));
+  });
+
+  historyBackBtn.addEventListener("click", () => switchView("painel"));
 
   // ---------------------------------------------------------------------
   // WebSocket

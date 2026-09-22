@@ -83,19 +83,36 @@ O painel mostra uma tabela com 6 colunas para cada evento:
 | **Horário** | Aplicação | Hora exata do evento (`HH:mm:ss`) |
 | **Serial Number** | Dispositivo externo | Identificador enviado pelo dispositivo (veja convenção abaixo) |
 | **Origem** | Dispositivo externo | IP (e porta, quando aplicável) de onde veio a conexão |
-| **Comunicação** | Dispositivo externo | Conteúdo enviado, truncado em até 60 caracteres. Por enquanto só recebe as mensagens do dispositivo — futuramente também vai carregar o envio de um "pong" de resposta. |
+| **Comunicação** | Aplicação | Indica se a troca aconteceu via `Ipv4` ou `Ipv6`, a partir da família de socket detectada pelo servidor (`socket.remoteFamily`). |
 | **Teste** | *(ainda sem lógica)* | Reservada para indicar se o teste deu OK, assim que o servidor receber a confirmação do dispositivo externo. Hoje fica sempre vazia (`—`). |
 
 Todas as colunas têm um campo de filtro por texto no próprio cabeçalho da
 tabela, além dos filtros de Serial Number e IP na barra lateral.
+
+## Histórico
+
+Todo evento que aparece no painel também é gravado em disco, em um arquivo
+`.txt` por dia (pasta `historico/`, criada automaticamente na primeira
+execução), nomeado no formato `dd-mm-aa` — por exemplo, os registros do dia
+01/09/2026 ficam em `historico/01-09-26.txt`. Cada linha do arquivo tem as
+mesmas 6 colunas do painel (Dia, Horário, Serial Number, Origem, Comunicação,
+Teste), separadas por tab.
+
+Na barra lateral existe uma aba **Histórico** (ao lado da aba **Painel**).
+Ao clicar nela, o painel principal passa a mostrar os registros gravados,
+com um seletor de data e um filtro por IP; o botão **← Voltar ao Painel**
+(ou a própria aba **Painel**) retorna para a visão em tempo real.
+
+Essa pasta não entra no controle de versão (veja `.gitignore`) — é dado de
+runtime, não código.
 
 ### Convenção do echo (porta 1111): `SERIAL:mensagem`
 
 Como o protocolo de echo original (`server.py`) não tem nenhum campo
 estruturado, definimos uma convenção simples para o dispositivo informar o
 número de série junto com os dados: tudo **antes dos dois-pontos** é tratado
-como Serial Number, e o restante como a mensagem (Comunicação). Por exemplo,
-se o dispositivo mandar:
+como Serial Number, e o restante é a mensagem em si (usada só internamente,
+não aparece em nenhuma coluna). Por exemplo, se o dispositivo mandar:
 
 ```
 SN-0042:Temperatura 23.5C, umidade 60%
@@ -103,10 +120,10 @@ SN-0042:Temperatura 23.5C, umidade 60%
 
 O painel mostra:
 - **Serial Number:** `SN-0042`
-- **Comunicação:** `Temperatura 23.5C, umidade 60%`
+- **Comunicação:** `Ipv4` (ou `Ipv6`, dependendo da conexão)
 
 Se o dispositivo mandar uma mensagem **sem** os dois-pontos, o Serial Number
-aparece como `—` (não informado) e a mensagem inteira vai para Comunicação.
+aparece como `—` (não informado).
 
 **Importante:** essa convenção é só para exibição no painel — o
 comportamento de *echo* continua sendo devolver exatamente os bytes
@@ -151,8 +168,11 @@ ServerIP-Transire/
 ├── package.json         # dependências (express, ws)
 ├── server.js             # servidor echo TCP + servidor web/WebSocket
 ├── public/
-│   ├── index.html          # estrutura do painel
+│   ├── index.html          # estrutura do painel (abas Painel/Histórico)
 │   ├── style.css           # tema industrial (chapa metálica, LEDs, faixas de risco)
-│   └── app.js               # lógica do painel: WebSocket, tabela, filtros
+│   ├── app.js               # lógica do painel: WebSocket, tabela, filtros, histórico
+│   └── rowFields.js         # deriva as 6 colunas a partir de um evento — usado pelo
+│                             # navegador (tabela em tempo real) e pelo servidor (gravação em disco)
+├── historico/             # gerado em runtime: um .txt por dia (não versionado)
 └── README.md
 ```
